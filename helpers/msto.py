@@ -20,7 +20,6 @@ from scipy.interpolate import interp1d
 from scipy.signal import find_peaks
 
 import ezpadova
-import matplotlib.pyplot as plt
 
 # PARSEC reference solar metallicity (Bressan et al. 2012; Z_sun = 0.0152).
 ZSUN_PARSEC = 0.0152
@@ -88,19 +87,18 @@ def _msto_from_isochrone(
         return float(iso[iso["label"] == 1][mag_col].iloc[idx])
 
 
-def _isochrone_cache_path(z: float, logage_range, dlogage: float) -> str:
+def _isochrone_cache_path(Z: float, logage_range, dlogage: float) -> str:
     """Default on-disk cache filename encoding the query parameters."""
-    tag = f"Z{z:.5f}_la{logage_range[0]:.2f}-{logage_range[1]:.2f}_d{dlogage:.3f}"
+    tag = f"Z{Z:.5f}_la{logage_range[0]:.2f}-{logage_range[1]:.2f}_d{dlogage:.3f}"
     return f"isochrones_{tag}.pkl"
 
 
 def fetch_isochrones(
-    z_over_zsun: float = 0.2,
+    Z: float,
     logage_range: tuple[float, float] = (6.0, 10.13),
     dlogage: float = 0.05,
-    zsun: float = ZSUN_PARSEC,
     photsys_file: str = WFC3_UVIS_PHOTSYS,
-    cache_path: str | None = None,
+    cache_folder: str | None = None,
     refresh: bool = False,
 ) -> pd.DataFrame:
     """Download (or load from disk) the raw PARSEC isochrone table.
@@ -112,11 +110,12 @@ def fetch_isochrones(
 
     Parameters
     ----------
-    z_over_zsun, logage_range, dlogage, zsun, photsys_file :
+    Z : float
+        Metallicity of the isochrones.
+    logage_range, dlogage, zsun, photsys_file :
         Same meaning as in :func:`msto_f336w_track`.
-    cache_path : str or None
-        Path to the pickle cache. If None, a default name derived from the query
-        parameters is used (so different metallicities/grids don't collide).
+    cache_folder : str or None
+        Path to the folder where the pickle cache will be stored. If None, current directory is used.
     refresh : bool
         If True, ignore any existing cache and re-download.
 
@@ -125,16 +124,16 @@ def fetch_isochrones(
     pandas.DataFrame
         The full isochrone table as returned by ``ezpadova.get_isochrones``.
     """
-    z = z_over_zsun * zsun
-    if cache_path is None:
-        cache_path = _isochrone_cache_path(z, logage_range, dlogage)
+    cache_folder = "." if cache_folder is None else cache_folder
+    os.makedirs(cache_folder, exist_ok=True)
+    cache_path = os.path.join(cache_folder, _isochrone_cache_path(Z, logage_range, dlogage))
 
     if not refresh and os.path.exists(cache_path):
         return pd.read_pickle(cache_path)
 
     isochrones = ezpadova.get_isochrones(
         logage=(logage_range[0], logage_range[1], dlogage),
-        Z=(z, z, 0.0),
+        Z=(Z, Z, 0.0),
         photsys_file=photsys_file,
     )
     isochrones.to_pickle(cache_path)
@@ -172,38 +171,12 @@ def msto_f336w_track(
     return track
 
 
-def make_msto_interpolator(track: pd.DataFrame, in_log_age: bool = True):
-    """Build a callable mapping age -> MSTO F336W magnitude from a track table.
-
-    Interpolation is done linearly in log10(age) by default, which is smoother
-    for isochrone grids that are uniform in log-age.
-
-    Parameters
-    ----------
-    track : pandas.DataFrame
-        Output of :func:`msto_f336w_track`.
-    in_log_age : bool
-        If True (default), the returned function expects age in years and
-        interpolates in log10(age). If False, it interpolates linearly in age.
-
-    Returns
-    -------
-    callable
-        ``f(age_yr) -> msto_F336W``. Accepts scalars or array-likes. Values
-        outside the tabulated age range are extrapolated.
-    """
-    if in_log_age:
-        base = interp1d(
-            track["logAge"].values,
-            track["msto_F336W"].values,
-            kind="linear",
-            fill_value="extrapolate",
-        )
-        return lambda age_yr: base(np.log10(age_yr))
-
-    return interp1d(
-        track["age_yr"].values,
+def make_msto_interpolator(track: pd.DataFrame):
+    base = interp1d(
+        track["logAge"].values,
         track["msto_F336W"].values,
         kind="linear",
         fill_value="extrapolate",
     )
+    return lambda age_yr: base(np.log10(age_yr))
+
