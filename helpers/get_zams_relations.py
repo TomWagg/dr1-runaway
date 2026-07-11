@@ -25,6 +25,8 @@ def get_ZAMS_he_relations(stellar_engine, metallicity, ibt):
     he_zams_row = bcm[bcm["kstar_1"] >= 4].drop_duplicates(subset="bin_num", keep="first")
     last_ms_row = bcm[bcm["kstar_1"] <= 1].drop_duplicates(subset="bin_num", keep="last")
 
+    last_star_row = bcm[bcm["kstar_1"] < 10].drop_duplicates(subset="bin_num", keep="last")
+
     last_ms_row["metallicity"] = np.ones_like(last_ms_row["bin_num"]) * metallicity
     phot = cogsworth.obs.observables.get_photometry(
         filters=["WFC3_UVIS_F336W"], final_bpp=last_ms_row,
@@ -37,10 +39,14 @@ def get_ZAMS_he_relations(stellar_engine, metallicity, ibt):
         "he_zams_mass": np.zeros_like(initC["mass_1"]),
         "ms_lifetime": np.zeros_like(initC["mass_1"]),
         "f336w_mag": np.zeros_like(initC["mass_1"]),
+        "post_ms_lifetime": np.zeros_like(initC["mass_1"]),
     }, index=initC["bin_num"])
     stats.loc[he_zams_row["bin_num"], "he_zams_mass"] = (he_zams_row["massc_he_layer_1"].values + he_zams_row["massc_co_layer_1"].values)
     stats.loc[last_ms_row["bin_num"], "ms_lifetime"] = last_ms_row["tphys"].values
     stats.loc[last_ms_row["bin_num"], "f336w_mag"] = phot["WFC3_UVIS_F336W_abs_1"].values + DISTANCE_MODULUS
+    stats.loc[last_star_row["bin_num"], "post_ms_lifetime"] = last_star_row["tphys"].values
+
+    stats["post_ms_lifetime"] = stats["post_ms_lifetime"] - stats["ms_lifetime"]
 
     return stats
 
