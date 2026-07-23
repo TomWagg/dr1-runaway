@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.ticker import AutoMinorLocator
 import astropy.units as u
 
 def calculate_mass_accreted(bpp):
@@ -144,6 +145,10 @@ def plot_corner(p, which_vars, extra_vars, extra_labels, label_meanings, main_ti
         im = plt.imread(cartoon_path)
         inset_ax.imshow(im)
         inset_ax.axis("off")
+
+    for ax in np.ravel(fig.axes):
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.yaxis.set_minor_locator(AutoMinorLocator())
 
     if save is not None:
         plt.savefig(save, bbox_inches="tight", format="pdf", dpi=300)
