@@ -75,11 +75,17 @@ def prepare_posteriors_for_corner(p):
     m2_at_sn = p.bpp[p.bpp["evol_type"] == 15].drop_duplicates(subset="bin_num", keep="first")['mass_2']
     p.bcm_row.loc[m2_at_sn.index, "m2_at_sn"] = m2_at_sn.values
 
+    p.bcm_row["he_core_mass"] = np.full(len(p.bcm_row), np.nan)
+    he_zams_rows = p.bpp[p.bpp["kstar_2"] == 7].drop_duplicates(subset="bin_num", keep="first")
+    he_core_mass = he_zams_rows["massc_he_layer_2"].values + he_zams_rows["massc_co_layer_2"].values
+    p.bcm_row.loc[he_zams_rows.index, "he_core_mass"] = he_core_mass
+    # p.bcm_row["he_core_mass"] = p.bcm_row["massc_he_layer_2"].values + p.bcm_row["massc_co_layer_2"].values
+
     return p
 
 def plot_corner(p, which_vars, extra_vars, extra_labels, label_meanings, main_title=None, constraints=None,
                 cartoon_path=None, dark_colour=None, colour=None, ranges=None, percentiles_colour="red",
-                save=None, show=True):
+                truths=None, save=None, show=True):
 
     N_PANELS = len(which_vars) + extra_vars.shape[1]
 
@@ -89,7 +95,8 @@ def plot_corner(p, which_vars, extra_vars, extra_labels, label_meanings, main_ti
     corner_kwargs = {
         "hist_kwargs": {"histtype": "stepfilled"},
         "label_kwargs": {"fontsize": 15},
-        "bins": 25
+        "bins": 25,
+        "truth_color": '#e74dcd',
     }
     if dark_colour is not None:
         corner_kwargs["color"] = dark_colour
@@ -101,6 +108,7 @@ def plot_corner(p, which_vars, extra_vars, extra_labels, label_meanings, main_ti
         show=False,
         extra_vars=extra_vars,
         extra_labels=extra_labels,
+        truths=truths,
         **corner_kwargs,
         range=ranges,
     )
