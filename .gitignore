@@ -219,3 +219,5 @@ __marimo__/
 
 *.out
 *.err
+
+COMPAS_Output*/

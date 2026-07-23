@@ -1,0 +1,1 @@
+--initial-mass-1 38.088645101016 --initial-mass-2 33.57604181161268 --orbital-period 169.29463462460382 --eccentricity 0.4342570635131429 --metallicity 0.00284 --maximum-evolution-time 20 --random-seed 35484 --kick-magnitude-1 10000.0
