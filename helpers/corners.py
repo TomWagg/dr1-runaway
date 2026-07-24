@@ -127,7 +127,7 @@ def plot_corner(p, which_vars, extra_vars, extra_labels, label_meanings, main_ti
         axes[i, i].annotate(labels[i], xy=(0.5, 1.01 if label_meanings[i] is None else 1.08), xycoords="axes fraction", ha="center", va="bottom", fontsize=15)
         if label_meanings[i] is not None:
             axes[i, i].annotate(label_meanings[i], xy=(0.5, 1.01), xycoords="axes fraction", ha="center", va="bottom", fontsize=10)
-        percs = np.nanpercentile(hist_vals[:, i], [10, 25, 75, 90], weights=10**p.log_w, method="inverted_cdf")
+        percs = np.nanpercentile(hist_vals[:, i], [10, 25, 75, 90], weights=np.exp(p.log_w), method="inverted_cdf")
 
         for perc_ind, style in zip([0, 1, 2, 3], ["--", "-", "-", "--"]):
             axes[i, i].axvline(percs[perc_ind], color=percentiles_colour, linestyle=style)
